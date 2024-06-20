@@ -18,7 +18,7 @@ def custom_abs_diff(tensors):
 
 # Ensure custom Lambda function is registered during model loading
 custom_objects = {'custom_abs_diff': custom_abs_diff}
-model = load_model('signet_model_augmented.keras', custom_objects=custom_objects, compile=False)
+model = load_model('/home/ramachandra/Desktop/DevHost/Ai/signet_model_augmented.keras', custom_objects=custom_objects, compile=False)
 
 @api_view(['POST'])
 def upload_image(request):
@@ -32,10 +32,12 @@ def upload_image(request):
         for chunk in image.chunks():
             temp_file.write(chunk)
         temp_file_path = temp_file.name
-    transaction = CreditCardTransaction.objects.get(account_number=ac_number)
-    model = load_model('signet_model_augmented.keras', custom_objects=custom_objects, compile=False)
-    path=transaction.signature_image
-    print(path)
+    try:
+        transaction = CreditCardTransaction.objects.get(account_number=ac_number)
+        path=transaction.signature_image
+    except CreditCardTransaction.DoesNotExist:
+        return Response({"error": "Account number not found"}, status=status.HTTP_200_OK)
+
     genuineness = evaluate_signature(temp_file_path,"media/"+str(path),model)
     os.remove(temp_file_path)
     return JsonResponse({'message': "Fake" if genuineness >75 else "Genuine" }, status=status.HTTP_200_OK)
